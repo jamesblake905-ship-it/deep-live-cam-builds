@@ -46,7 +46,9 @@ jobs:
           curl -fL --retry 3 -o portable/State/opennsfw2/.opennsfw2/weights/open_nsfw_weights.h5 https://github.com/bhky/opennsfw2/releases/download/v0.1.0/open_nsfw_weights.h5
           echo '14ca261f48bdd88c1eecba96a761bd1579b523adae1b749b0a4ffd8b7ed8babe  portable/State/opennsfw2/.opennsfw2/weights/open_nsfw_weights.h5' | shasum -a 256 -c
       - name: Verify packaged imports
-        run: portable/runtime/DeepLiveCam --help
+        run: |
+          portable/runtime/DeepLiveCam --help
+          "portable/Deep Live Cam.app/Contents/MacOS/DeepLiveCam" --version
       - name: Preserve executable permissions
         run: tar -czf DeepLiveCam-Apple-Silicon.tar.gz portable
       - uses: actions/upload-artifact@v4

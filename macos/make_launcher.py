@@ -3,6 +3,7 @@ from pathlib import Path
 import plistlib
 import shutil
 import sys
+import subprocess
 
 folder = Path(sys.argv[1]).resolve()
 app = folder / 'Deep Live Cam.app'
@@ -28,26 +29,23 @@ info = {
 (app / 'Contents/Info.plist').write_bytes(plistlib.dumps(info))
 # A native main executable gives macOS a real application bundle and camera
 # usage description. Share the adjacent runtime data without duplicating it.
-shutil.copy2(folder / 'runtime/DeepLiveCam', macos / 'DeepLiveCam')
+staged_executable = macos / 'DeepLiveCam.new'
+shutil.copy2(folder / 'runtime/DeepLiveCam', staged_executable)
+staged_executable.replace(macos / 'DeepLiveCam')
 internal = macos / '_internal'
 if not internal.exists():
     internal.symlink_to('../../../runtime/_internal', target_is_directory=True)
-script = '''#!/bin/bash
-set -e
-ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-cd "$ROOT"
-mkdir -p Logs
-export PATH="$ROOT/runtime:/usr/bin:/bin:/usr/sbin:/sbin"
-export KERAS_BACKEND=torch
-export KERAS_HOME="$ROOT/State/keras"
-export OPENNSFW2_HOME="$ROOT/State/opennsfw2"
-exec "$ROOT/runtime/DeepLiveCam" --execution-provider coreml --det-size 320 --execution-threads 4 "$@" >> "$ROOT/Logs/application.log" 2>&1
-'''
-(macos / 'launch').write_text(script)
-(macos / 'launch').chmod(0o755)
+frameworks = app / 'Contents/Frameworks'
+if not frameworks.exists():
+    frameworks.symlink_to('../../runtime/_internal', target_is_directory=True)
 (folder / 'Start Deep Live Cam.command').write_text('''#!/bin/bash
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-exec "$ROOT/Deep Live Cam.app/Contents/MacOS/launch" "$@"
+exec "$ROOT/Deep Live Cam.app/Contents/MacOS/DeepLiveCam" "$@"
 ''')
 (folder / 'Start Deep Live Cam.command').chmod(0o755)
+# Strip only Finder metadata from this generated bundle before ad-hoc signing.
+if subprocess.run(['xattr', '-p', 'com.apple.FinderInfo', str(app)], capture_output=True).returncode == 0:
+    subprocess.run(['xattr', '-d', 'com.apple.FinderInfo', str(app)], check=True)
+subprocess.run(['codesign', '--force', '--sign', '-', str(app)], check=True)
+subprocess.run(['codesign', '--verify', '--verbose=2', str(app)], check=True)
 print(app)
