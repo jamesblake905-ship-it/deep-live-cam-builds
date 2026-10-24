@@ -40,3 +40,7 @@ if "root=os.path.join(os.path.dirname(os.path.dirname(__file__))" not in s:
 p.write_text(s)
 p = root / 'modules/core.py'
 p.write_text(p.read_text().replace('        quit()', '        sys.exit()'))
+
+patch = Path(__file__).with_name('interface.patch').resolve()
+if subprocess.run(['git', 'apply', '--reverse', '--check', str(patch)], cwd=root, capture_output=True).returncode != 0:
+    subprocess.run(['git', 'apply', str(patch)], cwd=root, check=True)
