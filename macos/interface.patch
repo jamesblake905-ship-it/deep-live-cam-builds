@@ -95,13 +95,17 @@ index 18ab49f..7002018 100644
          self.btn_destroy.setToolTip(_("Stop processing and close the application"))
          self.btn_destroy.clicked.connect(lambda: self._destroy_cb())
 diff --git a/run.py b/run.py
-index a0571c2..1142cb0 100644
+index a0571c2..348909e 100644
 --- a/run.py
 +++ b/run.py
-@@ -3,6 +3,16 @@
+@@ -3,6 +3,20 @@
  import os
  import sys
  
++if __name__ == "__main__":
++    import multiprocessing
++    multiprocessing.freeze_support()
++
 +# The portable build must not mix bundled libraries with Homebrew subprocesses.
 +# Persist the font cache for this stable onedir bundle instead of rebuilding it
 +# in PyInstaller's temporary MPLCONFIGDIR on every launch.
