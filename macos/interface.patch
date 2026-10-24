@@ -95,10 +95,10 @@ index 18ab49f..7002018 100644
          self.btn_destroy.setToolTip(_("Stop processing and close the application"))
          self.btn_destroy.clicked.connect(lambda: self._destroy_cb())
 diff --git a/run.py b/run.py
-index a0571c2..348909e 100644
+index a0571c2..be97c32 100644
 --- a/run.py
 +++ b/run.py
-@@ -3,6 +3,20 @@
+@@ -3,6 +3,34 @@
  import os
  import sys
  
@@ -110,11 +110,25 @@ index a0571c2..348909e 100644
 +# Persist the font cache for this stable onedir bundle instead of rebuilding it
 +# in PyInstaller's temporary MPLCONFIGDIR on every launch.
 +if getattr(sys, "frozen", False):
-+    bundle_root = os.path.dirname(os.path.dirname(sys.executable))
-+    os.environ["PATH"] = os.path.dirname(sys.executable) + os.pathsep + "/usr/bin:/bin:/usr/sbin:/sbin"
++    executable_dir = os.path.dirname(sys.executable)
++    native_app = os.path.basename(executable_dir) == "MacOS" and os.path.basename(os.path.dirname(executable_dir)) == "Contents"
++    bundle_root = os.path.dirname(os.path.dirname(os.path.dirname(executable_dir))) if native_app else os.path.dirname(executable_dir)
++    os.environ["PATH"] = os.path.join(bundle_root, "runtime") + os.pathsep + "/usr/bin:/bin:/usr/sbin:/sbin"
 +    os.environ["MPLCONFIGDIR"] = os.path.join(bundle_root, "State", "matplotlib")
 +    os.environ["MPLBACKEND"] = "Agg"
++    os.environ.setdefault("KERAS_BACKEND", "torch")
++    os.environ.setdefault("KERAS_HOME", os.path.join(bundle_root, "State", "keras"))
++    os.environ.setdefault("OPENNSFW2_HOME", os.path.join(bundle_root, "State", "opennsfw2"))
 +    os.makedirs(os.environ["MPLCONFIGDIR"], exist_ok=True)
++    if native_app:
++        os.chdir(bundle_root)
++        if len(sys.argv) == 1:
++            sys.argv.extend(["--execution-provider", "coreml", "--det-size", "320", "--execution-threads", "4"])
++            os.makedirs(os.path.join(bundle_root, "Logs"), exist_ok=True)
++            log_fd = os.open(os.path.join(bundle_root, "Logs", "application.log"), os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
++            os.dup2(log_fd, 1)
++            os.dup2(log_fd, 2)
++            os.close(log_fd)
 +
  # Add the project root to PATH so bundled ffmpeg/ffprobe are found
  project_root = os.path.dirname(os.path.abspath(__file__))

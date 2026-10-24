@@ -17,7 +17,7 @@ info = {
     'CFBundleName': 'Deep Live Cam',
     'CFBundleDisplayName': 'Deep Live Cam',
     'CFBundleIdentifier': 'local.jamesblake.deeplivecam',
-    'CFBundleExecutable': 'launch',
+    'CFBundleExecutable': 'DeepLiveCam',
     'CFBundlePackageType': 'APPL',
     'CFBundleShortVersionString': '2026.10.24',
     'CFBundleVersion': '20261024',
@@ -26,6 +26,12 @@ info = {
     'CFBundleIconFile': 'AppIcon',
 }
 (app / 'Contents/Info.plist').write_bytes(plistlib.dumps(info))
+# A native main executable gives macOS a real application bundle and camera
+# usage description. Share the adjacent runtime data without duplicating it.
+shutil.copy2(folder / 'runtime/DeepLiveCam', macos / 'DeepLiveCam')
+internal = macos / '_internal'
+if not internal.exists():
+    internal.symlink_to('../../../runtime/_internal', target_is_directory=True)
 script = '''#!/bin/bash
 set -e
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
