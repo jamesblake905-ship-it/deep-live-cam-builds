@@ -94,3 +94,24 @@ index 18ab49f..7002018 100644
          self.btn_destroy.setObjectName("danger")
          self.btn_destroy.setToolTip(_("Stop processing and close the application"))
          self.btn_destroy.clicked.connect(lambda: self._destroy_cb())
+diff --git a/run.py b/run.py
+index a0571c2..1142cb0 100644
+--- a/run.py
++++ b/run.py
+@@ -3,6 +3,16 @@
+ import os
+ import sys
+ 
++# The portable build must not mix bundled libraries with Homebrew subprocesses.
++# Persist the font cache for this stable onedir bundle instead of rebuilding it
++# in PyInstaller's temporary MPLCONFIGDIR on every launch.
++if getattr(sys, "frozen", False):
++    bundle_root = os.path.dirname(os.path.dirname(sys.executable))
++    os.environ["PATH"] = os.path.dirname(sys.executable) + os.pathsep + "/usr/bin:/bin:/usr/sbin:/sbin"
++    os.environ["MPLCONFIGDIR"] = os.path.join(bundle_root, "State", "matplotlib")
++    os.environ["MPLBACKEND"] = "Agg"
++    os.makedirs(os.environ["MPLCONFIGDIR"], exist_ok=True)
++
+ # Add the project root to PATH so bundled ffmpeg/ffprobe are found
+ project_root = os.path.dirname(os.path.abspath(__file__))
+ os.environ["PATH"] = project_root + os.pathsep + os.environ.get("PATH", "")

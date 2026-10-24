@@ -31,7 +31,7 @@ set -e
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$ROOT"
 mkdir -p Logs
-export PATH="$ROOT/runtime:$PATH"
+export PATH="$ROOT/runtime:/usr/bin:/bin:/usr/sbin:/sbin"
 export KERAS_BACKEND=torch
 export KERAS_HOME="$ROOT/State/keras"
 export OPENNSFW2_HOME="$ROOT/State/opennsfw2"
