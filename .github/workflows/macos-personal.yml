@@ -1,0 +1,53 @@
+name: Personal Apple Silicon build
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      QT_QPA_PLATFORM: offscreen
+      KERAS_BACKEND: torch
+      DLC_SOURCE: ${{ github.workspace }}/upstream
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: hacksider/Deep-Live-Cam
+          ref: f8f9b85275b06edc039a22d17867751e9f20933b
+          path: upstream
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: python -m pip install -r macos/requirements-lock.txt
+      - name: Prepare and verify models
+        run: python macos/prepare.py upstream
+      - name: Upstream regression suite
+        run: |
+          cd upstream
+          for test in tests/test_*.py; do python -m pytest "$test" -q; done
+      - name: Package
+        run: python -m PyInstaller macos/DeepLiveCam.spec --noconfirm
+      - name: Bundle FFmpeg and Finder launcher
+        run: |
+          mkdir -p ffmpeg-download portable
+          curl -fL --retry 3 -o ffmpeg-download/ffmpeg.zip https://ffmpeg.martin-riedl.de/redirect/latest/macos/arm64/release/ffmpeg.zip
+          curl -fL --retry 3 -o ffmpeg-download/ffprobe.zip https://ffmpeg.martin-riedl.de/redirect/latest/macos/arm64/release/ffprobe.zip
+          echo 'c8ed4c4e6978a03c485edbfe4e0a5dc2380f8a30bba5150531b31b094492d924  ffmpeg-download/ffmpeg.zip' | shasum -a 256 -c
+          echo 'fcbe839537485eaee7a7a8bc5cbc0f90d53617e80943e8a5b2e31cb851197ea6  ffmpeg-download/ffprobe.zip' | shasum -a 256 -c
+          unzip -q ffmpeg-download/ffmpeg.zip -d dist/DeepLiveCam
+          unzip -q ffmpeg-download/ffprobe.zip -d dist/DeepLiveCam
+          mv dist/DeepLiveCam portable/runtime
+          python macos/make_launcher.py portable
+      - name: Verify packaged imports
+        run: portable/runtime/DeepLiveCam --help
+      - name: Preserve executable permissions
+        run: tar -czf DeepLiveCam-Apple-Silicon.tar.gz portable
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DeepLiveCam-Apple-Silicon
+          path: DeepLiveCam-Apple-Silicon.tar.gz
+          retention-days: 14
