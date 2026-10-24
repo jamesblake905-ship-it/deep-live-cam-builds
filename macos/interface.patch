@@ -10,6 +10,22 @@ index 9bc9ba9..26c43fc 100644
 +name = 'Deep Live Cam'
 +version = '2026.10.24'
 +edition = 'Apple Silicon / f8f9b85'
+diff --git a/modules/onnx_optimize.py b/modules/onnx_optimize.py
+index a49d023..32719b7 100644
+--- a/modules/onnx_optimize.py
++++ b/modules/onnx_optimize.py
+@@ -61,6 +61,11 @@ def optimize_for_coreml(model_path: str, input_shape: tuple = None) -> str:
+     # be reused after switching to 320/160.
+     shape_tag = "_" + "x".join(str(d) for d in input_shape) if input_shape else ""
+     optimized_path = f"{base}_coreml{shape_tag}{ext}"
++    cache_root = os.environ.get("DLC_MODEL_CACHE")
++    if cache_root:
++        os.makedirs(cache_root, exist_ok=True)
++        optimized_path = os.path.join(cache_root, os.path.basename(optimized_path))
++
+     if os.path.exists(optimized_path):
+         if os.path.getmtime(optimized_path) >= os.path.getmtime(model_path):
+             return optimized_path
 diff --git a/modules/ui.py b/modules/ui.py
 index 18ab49f..7002018 100644
 --- a/modules/ui.py
@@ -95,10 +111,10 @@ index 18ab49f..7002018 100644
          self.btn_destroy.setToolTip(_("Stop processing and close the application"))
          self.btn_destroy.clicked.connect(lambda: self._destroy_cb())
 diff --git a/run.py b/run.py
-index a0571c2..be97c32 100644
+index a0571c2..1c7417f 100644
 --- a/run.py
 +++ b/run.py
-@@ -3,6 +3,34 @@
+@@ -3,6 +3,32 @@
  import os
  import sys
  
@@ -106,29 +122,27 @@ index a0571c2..be97c32 100644
 +    import multiprocessing
 +    multiprocessing.freeze_support()
 +
-+# The portable build must not mix bundled libraries with Homebrew subprocesses.
-+# Persist the font cache for this stable onedir bundle instead of rebuilding it
-+# in PyInstaller's temporary MPLCONFIGDIR on every launch.
++# Resolve all assets relative to the app; writable state belongs to its user.
 +if getattr(sys, "frozen", False):
 +    executable_dir = os.path.dirname(sys.executable)
-+    native_app = os.path.basename(executable_dir) == "MacOS" and os.path.basename(os.path.dirname(executable_dir)) == "Contents"
-+    bundle_root = os.path.dirname(os.path.dirname(os.path.dirname(executable_dir))) if native_app else os.path.dirname(executable_dir)
-+    os.environ["PATH"] = os.path.join(bundle_root, "runtime") + os.pathsep + "/usr/bin:/bin:/usr/sbin:/sbin"
-+    os.environ["MPLCONFIGDIR"] = os.path.join(bundle_root, "State", "matplotlib")
++    state = os.environ.get("DLC_DATA_DIR") or os.path.expanduser("~/Library/Application Support/DeepLiveCam")
++    os.makedirs(state, exist_ok=True)
++    os.environ["PATH"] = executable_dir + os.pathsep + "/usr/bin:/bin:/usr/sbin:/sbin"
++    os.environ["MPLCONFIGDIR"] = os.path.join(state, "matplotlib")
 +    os.environ["MPLBACKEND"] = "Agg"
-+    os.environ.setdefault("KERAS_BACKEND", "torch")
-+    os.environ.setdefault("KERAS_HOME", os.path.join(bundle_root, "State", "keras"))
-+    os.environ.setdefault("OPENNSFW2_HOME", os.path.join(bundle_root, "State", "opennsfw2"))
++    os.environ["KERAS_BACKEND"] = "torch"
++    os.environ["KERAS_HOME"] = os.path.join(state, "keras")
++    os.environ["OPENNSFW2_HOME"] = os.path.join(sys._MEIPASS, "opennsfw2-data")
++    os.environ["DLC_MODEL_CACHE"] = os.path.join(state, "models-f8f9b85")
++    os.environ["NO_ALBUMENTATIONS_UPDATE"] = "1"
 +    os.makedirs(os.environ["MPLCONFIGDIR"], exist_ok=True)
-+    if native_app:
-+        os.chdir(bundle_root)
-+        if len(sys.argv) == 1:
-+            sys.argv.extend(["--execution-provider", "coreml", "--det-size", "320", "--execution-threads", "4"])
-+            os.makedirs(os.path.join(bundle_root, "Logs"), exist_ok=True)
-+            log_fd = os.open(os.path.join(bundle_root, "Logs", "application.log"), os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
-+            os.dup2(log_fd, 1)
-+            os.dup2(log_fd, 2)
-+            os.close(log_fd)
++    os.chdir(state)
++    if len(sys.argv) == 1:
++        sys.argv.extend(["--execution-provider", "coreml", "--det-size", "320", "--execution-threads", "4"])
++        log_fd = os.open(os.path.join(state, "application.log"), os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
++        os.dup2(log_fd, 1)
++        os.dup2(log_fd, 2)
++        os.close(log_fd)
 +
  # Add the project root to PATH so bundled ffmpeg/ffprobe are found
  project_root = os.path.dirname(os.path.abspath(__file__))
