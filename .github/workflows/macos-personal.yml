@@ -34,14 +34,17 @@ jobs:
       - name: Bundle FFmpeg and Finder launcher
         run: |
           mkdir -p ffmpeg-download portable
-          curl -fL --retry 3 -o ffmpeg-download/ffmpeg.zip https://ffmpeg.martin-riedl.de/redirect/latest/macos/arm64/release/ffmpeg.zip
-          curl -fL --retry 3 -o ffmpeg-download/ffprobe.zip https://ffmpeg.martin-riedl.de/redirect/latest/macos/arm64/release/ffprobe.zip
+          curl -fL --retry 3 -o ffmpeg-download/ffmpeg.zip https://ffmpeg.martin-riedl.de/download/macos/arm64/1789931890_9.0.2/ffmpeg.zip
+          curl -fL --retry 3 -o ffmpeg-download/ffprobe.zip https://ffmpeg.martin-riedl.de/download/macos/arm64/1789931890_9.0.2/ffprobe.zip
           echo 'c8ed4c4e6978a03c485edbfe4e0a5dc2380f8a30bba5150531b31b094492d924  ffmpeg-download/ffmpeg.zip' | shasum -a 256 -c
           echo 'fcbe839537485eaee7a7a8bc5cbc0f90d53617e80943e8a5b2e31cb851197ea6  ffmpeg-download/ffprobe.zip' | shasum -a 256 -c
           unzip -q ffmpeg-download/ffmpeg.zip -d dist/DeepLiveCam
           unzip -q ffmpeg-download/ffprobe.zip -d dist/DeepLiveCam
           mv dist/DeepLiveCam portable/runtime
           python macos/make_launcher.py portable
+          mkdir -p portable/State/opennsfw2/.opennsfw2/weights
+          curl -fL --retry 3 -o portable/State/opennsfw2/.opennsfw2/weights/open_nsfw_weights.h5 https://github.com/bhky/opennsfw2/releases/download/v0.1.0/open_nsfw_weights.h5
+          echo '14ca261f48bdd88c1eecba96a761bd1579b523adae1b749b0a4ffd8b7ed8babe  portable/State/opennsfw2/.opennsfw2/weights/open_nsfw_weights.h5' | shasum -a 256 -c
       - name: Verify packaged imports
         run: portable/runtime/DeepLiveCam --help
       - name: Preserve executable permissions

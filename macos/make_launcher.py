@@ -1,6 +1,7 @@
 """Add a Finder launcher to a portable, locally built application folder."""
 from pathlib import Path
 import plistlib
+import shutil
 import sys
 
 folder = Path(sys.argv[1]).resolve()
@@ -9,6 +10,9 @@ macos = app / 'Contents/MacOS'
 macos.mkdir(parents=True, exist_ok=True)
 resources = app / 'Contents/Resources'
 resources.mkdir(parents=True, exist_ok=True)
+icon = Path(__file__).with_name('AppIcon.icns')
+if icon.exists():
+    shutil.copy2(icon, resources / 'AppIcon.icns')
 info = {
     'CFBundleName': 'Deep Live Cam',
     'CFBundleDisplayName': 'Deep Live Cam',
